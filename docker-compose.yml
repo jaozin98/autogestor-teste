@@ -1,0 +1,99 @@
+services:
+    # Aplicação Laravel
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: autogestor_app
+        restart: unless-stopped
+        working_dir: /var/www/html
+        volumes: []
+        networks:
+            - autogestor_network
+        depends_on:
+            - mysql
+            - mysql_testing
+            - redis
+        env_file:
+            - .env.docker
+        environment:
+            - APP_ENV=local
+            - APP_DEBUG=true
+        ports:
+            - "8000:80"
+
+    # MySQL para desenvolvimento/produção
+    mysql:
+        image: mysql:8.0
+        container_name: autogestor_mysql
+        restart: unless-stopped
+        environment:
+            MYSQL_DATABASE: auto_gestor
+            MYSQL_ROOT_PASSWORD: root
+            MYSQL_USER: autogestor
+            MYSQL_PASSWORD: autogestor123
+            SERVICE_TAGS: dev
+            SERVICE_NAME: mysql
+        ports:
+            - "3308:3306"
+        volumes:
+            - mysql_data:/var/lib/mysql
+        networks:
+            - autogestor_network
+
+    # MySQL para testes
+    mysql_testing:
+        image: mysql:8.0
+        container_name: autogestor_mysql_testing
+        restart: unless-stopped
+        environment:
+            MYSQL_DATABASE: auto_gestor_testing
+            MYSQL_ROOT_PASSWORD: root
+            MYSQL_USER: autogestor_test
+            MYSQL_PASSWORD: autogestor_test123
+            SERVICE_TAGS: test
+            SERVICE_NAME: mysql_testing
+        ports:
+            - "3307:3306"
+        volumes:
+            - mysql_testing_data:/var/lib/mysql
+        networks:
+            - autogestor_network
+
+    # Redis para cache e sessões
+    redis:
+        image: redis:7-alpine
+        container_name: autogestor_redis
+        restart: unless-stopped
+        ports:
+            - "6379:6379"
+        volumes:
+            - redis_data:/data
+        networks:
+            - autogestor_network
+
+    # Nginx (opcional, para produção)
+    nginx:
+        image: nginx:alpine
+        container_name: autogestor_nginx
+        restart: unless-stopped
+        ports:
+            - "8080:80"
+        volumes:
+            - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+        networks:
+            - autogestor_network
+        depends_on:
+            - app
+
+volumes:
+    mysql_data:
+        driver: local
+    mysql_testing_data:
+        driver: local
+    redis_data:
+        driver: local
+
+networks:
+    autogestor_network:
+        driver: bridge

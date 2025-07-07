@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+  # Aplicação para testes
+  app_testing:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: autogestor_app_testing
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - autogestor_testing_network
+    depends_on:
+      - mysql_testing
+    environment:
+      - APP_ENV=testing
+      - APP_DEBUG=true
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql_testing
+      - DB_PORT=3306
+      - DB_DATABASE=auto_gestor_testing
+      - DB_USERNAME=autogestor_test
+      - DB_PASSWORD=autogestor_test123
+    ports:
+      - "8001:80"
+
+  # MySQL para testes
+  mysql_testing:
+    image: mysql:8.0
+    container_name: autogestor_mysql_testing_only
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: auto_gestor_testing
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: autogestor_test
+      MYSQL_PASSWORD: autogestor_test123
+      SERVICE_TAGS: test
+      SERVICE_NAME: mysql_testing
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql_testing_only_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/my.cnf
+    networks:
+      - autogestor_testing_network
+
+volumes:
+  mysql_testing_only_data:
+    driver: local
+
+networks:
+  autogestor_testing_network:
+    driver: bridge
